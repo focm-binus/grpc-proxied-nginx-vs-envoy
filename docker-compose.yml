@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  gserver1:
+    build: ./grpc/
+    container_name: gserver1
+    # ports:
+    #   - "50051:50051"
+  gserver2:
+    build: ./grpc/
+    container_name: gserver2
+    # ports:
+    #   - "50052:50051"
+  nginx:
+    build: ./nginx/
+    container_name: nginx
+    ports:
+      - "8000:80"
+    depends_on:
+      - gserver1
+      - gserver2
+  envoy:
+    image: envoyproxy/envoy-dev:e9f36d2c49a3c9176340303b44ef593bd0b78c35
+    container_name: envoy
+    ports:
+      - "8080:8080"
+      # - "8001:8001"
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml
+    depends_on:
+      - gserver1
+      - gserver2
+  k6:
+    image: loadimpact/k6:latest
+    container_name: k6
+    # ports:
+      # - "6565:6565"
+    volumes:
+      - ./k6/script.js:/home/k6/script.js
+      - ./grpc/helloworld.proto:/home/k6/helloworld.proto
+    entrypoint: tail -f
+    depends_on:
+      - nginx
+      - envoy
+    
